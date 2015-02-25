@@ -165,7 +165,6 @@ class LogisticRegression(object):
         else:
             raise NotImplementedError()
 
-
 def load_data(dataset):
     ''' Loads the dataset
 
@@ -224,7 +223,7 @@ def load_data(dataset):
 
 
 def sgd_optimization_mnist(learning_rate=0.1, n_epochs=100,
-                           dataset='arxiv_cs_math_1000_100',
+                           dataset='arxiv_cs_math_5000_100',
                            batch_size=100):
     """
     Demonstrate stochastic gradient descent optimization of a log-linear

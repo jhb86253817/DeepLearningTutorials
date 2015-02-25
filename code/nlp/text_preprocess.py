@@ -1,5 +1,5 @@
 """
-This script preprocess the corpus and then store it in json file with ndarray
+This script preprocess the corpus, transform each doc to lsi vector and then store it in json file with ndarray
 format.
 
 train_set, valid_set, test_set format: tuple(input, target)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
         papers_math_string = f.read()
     papers_cs = json.loads(papers_cs_string)
     papers_math = json.loads(papers_math_string)
-    papers_num = 1000
+    papers_num = 5000
     papers_cs = papers_cs[:papers_num]
     papers_math = papers_math[:papers_num]
     labels = [1] * len(papers_cs) + [0] * len(papers_math)
@@ -70,8 +70,7 @@ if __name__ == '__main__':
     train_set = list2array(train_set)
     valid_set = list2array(valid_set)
     test_set = list2array(test_set)
-    with open('arxiv_cs_math_1000_100', 'wb') as f:
+    with open('arxiv_cs_math_5000_100', 'wb') as f:
         cPickle.dump((train_set,valid_set,test_set), f)
-
 
 
