@@ -60,7 +60,7 @@ class RNNLM(object):
                                 sequences=x,
                                 outputs_info=[self.h0, None],
                                 n_steps=x.shape[0],
-                                truncate_gradient=3)
+                                truncate_gradient=-1)
 
         p_y_given_x_sentence = s[:, 0, :]
         y_pred = T.argmax(p_y_given_x_sentence, axis=1)
@@ -166,7 +166,7 @@ def main(param=None):
     if not param:
         param = {
             #'lr': 0.0970806646812754,
-            'lr': 1.6970806646812754,
+            'lr': 0.6970806646812754,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -174,7 +174,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_40000_1.69',
+            'folder':'rnnlm_40000_0.69',
             'train': True,
             'test': False}
     print param
