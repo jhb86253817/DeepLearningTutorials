@@ -59,7 +59,8 @@ class RNNLM(object):
         [h, s], _ = theano.scan(fn=recurrence,
                                 sequences=x,
                                 outputs_info=[self.h0, None],
-                                n_steps=x.shape[0])
+                                n_steps=x.shape[0],
+                                truncate_gradient=3)
 
         p_y_given_x_sentence = s[:, 0, :]
         y_pred = T.argmax(p_y_given_x_sentence, axis=1)
