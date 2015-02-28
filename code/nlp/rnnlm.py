@@ -77,12 +77,13 @@ class RNNLM(object):
         sentence_ppl = T.pow(2, sentence_nll)
 
         # theano functions to compile
-        self.classify = theano.function(inputs=[idxs], outputs=y_pred)
-        self.prob_dist = theano.function(inputs=[idxs], outputs=p_y_given_x_sentence)
-        self.ppl = theano.function(inputs=[idxs, y_sentence], outputs=sentence_ppl)
+        self.classify = theano.function(inputs=[idxs], outputs=y_pred, allow_input_downcast=True)
+        self.prob_dist = theano.function(inputs=[idxs], outputs=p_y_given_x_sentence, allow_input_downcast=True)
+        self.ppl = theano.function(inputs=[idxs, y_sentence], outputs=sentence_ppl, allow_input_downcast=True)
         self.sentence_train = theano.function(inputs=[idxs, y_sentence, lr],
                                               outputs=sentence_nll,
-                                              updates=sentence_updates)
+                                              updates=sentence_updates,
+                                              allow_input_downcast=True)
     def save(self, folder):
         for param in self.params:
             numpy.save(os.path.join(folder, param.name+'.npy'),
@@ -164,7 +165,7 @@ def main(param=None):
     if not param:
         param = {
             #'lr': 0.0970806646812754,
-            'lr': 4.6970806646812754,
+            'lr': 1.6970806646812754,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -172,7 +173,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_10000_4.69',
+            'folder':'rnnlm_40000_1.69',
             'train': True,
             'test': False}
     print param
@@ -202,15 +203,15 @@ def main(param=None):
         start = time.time()
 
         print "Training..."
-        train_lines = 10000
+        train_lines = 40000
         #adapt learning rate
         lrs = [param['lr'] * (1 - iter_num/train_lines) for iter_num in xrange(1,train_lines+1)]
 
         i = 1
         for (x,y) in zip(train_data[0][:train_lines], train_data[1][:train_lines]):
             rnn.sentence_train(x, y, lrs[i-1])
-            print "%d of %d" % (i, train_lines)
             if i%100 == 0:
+                print "%d of %d" % (i, train_lines)
                 test_ppl = ppl(toy_data, rnn)
                 print "Test perplexity of toy data: %f \n" % test_ppl
             i += 1
