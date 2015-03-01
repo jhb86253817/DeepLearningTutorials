@@ -174,7 +174,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_40000_3.69',
+            'folder':'rnnlm_2_40000_3.69',
             'train': True,
             'test': False}
     print param
@@ -204,18 +204,20 @@ def main(param=None):
         start = time.time()
 
         print "Training..."
+        round_num = 2
         train_lines = 40000
         #adapt learning rate
-        lrs = [param['lr'] * (1 - iter_num/train_lines) for iter_num in xrange(1,train_lines+1)]
+        lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
 
         i = 1
-        for (x,y) in zip(train_data[0][:train_lines], train_data[1][:train_lines]):
-            rnn.sentence_train(x, y, lrs[i-1])
-            if i%100 == 0:
-                print "%d of %d" % (i, train_lines)
-                test_ppl = ppl(toy_data, rnn)
-                print "Test perplexity of toy data: %f \n" % test_ppl
-            i += 1
+        for j in xrange(round_num):
+            for (x,y) in zip(train_data[0][:train_lines], train_data[1][:train_lines]):
+                rnn.sentence_train(x, y, lrs[i-1])
+                if i%100 == 0:
+                    print "%d of %d" % (i, round_num*train_lines)
+                    test_ppl = ppl(toy_data, rnn)
+                    print "Test perplexity of toy data: %f \n" % test_ppl
+                i += 1
 
         test_ppl = ppl(test_data, rnn)
         print "Test perplexity of test data: %f \n" % test_ppl
