@@ -166,7 +166,7 @@ def main(param=None):
     if not param:
         param = {
             #'lr': 0.0970806646812754,
-            'lr': 3.6970806646812754,
+            'lr': 0.6970806646812754,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -174,7 +174,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_2_40000_3.69',
+            'folder':'rnnlm_2_40000_0.69',
             'train': True,
             'test': False}
     print param
@@ -231,7 +231,7 @@ def main(param=None):
             rnn.save(param['folder'])
 
     if param['test'] == True:
-        text = "<bos> although preliminary findings were"
+        text = "<bos> japan is"
         next_word(text, train_dict, index2word, rnn, 10)
 
 if __name__ == '__main__':
