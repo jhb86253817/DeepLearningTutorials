@@ -170,7 +170,7 @@ def main(param=None):
     if not param:
         param = {
             #'lr': 0.0970806646812754,
-            'lr': 0.6970806646812754,
+            'lr': 3.6970806646812754,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -178,7 +178,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_2_40000_0.19',
+            'folder':'rnnlm_2_40000_3.69_w2v',
             'train': True,
             'test': False,
             'word2vec': True}
