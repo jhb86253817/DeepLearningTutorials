@@ -22,16 +22,13 @@ class RNNLM(object):
                                 value=numpy.eye(nw,
                                 dtype=theano.config.floatX))
         self.wx = theano.shared(name='wx',
-                                value=0.2 * numpy.random.uniform(-1.0, 1.0,
-                                (nw, nh))
+                                value=0.02 * numpy.random.randn(nw, nh)
                                 .astype(theano.config.floatX))
         self.wh = theano.shared(name='wh',
-                                value=0.2 * numpy.random.uniform(-1.0, 1.0,
-                                (nh, nh))
+                                value=0.02 * numpy.random.randn(nh, nh)
                                 .astype(theano.config.floatX))
         self.w = theano.shared(name='w',
-                               value=0.2 * numpy.random.uniform(-1.0, 1.0,
-                               (nh, nw))
+                               value=0.02 * numpy.random.randn(nh, nw)
                                .astype(theano.config.floatX))
         self.bh = theano.shared(name='bh',
                                 value=numpy.zeros(nh,
@@ -170,7 +167,8 @@ def main(param=None):
     if not param:
         param = {
             #'lr': 0.0970806646812754,
-            'lr': 3.6970806646812754,
+            #'lr': 3.6970806646812754,
+            'lr': 0.1,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -178,10 +176,10 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_2_40000_3.69_w2v',
+            'folder':'rnnlm_4_10000_0.1',
             'train': True,
             'test': False,
-            'word2vec': True}
+            'word2vec': False}
     print param
 
     # load data and dictionary
@@ -210,8 +208,8 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 2
-        train_lines = 40000
+        round_num = 4 
+        train_lines = 10000
         #adapt learning rate
         lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
 
