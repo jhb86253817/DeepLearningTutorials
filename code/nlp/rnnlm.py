@@ -22,13 +22,13 @@ class RNNLM(object):
                                 value=numpy.eye(nw,
                                 dtype=theano.config.floatX))
         self.wx = theano.shared(name='wx',
-                                value=0.02 * numpy.random.randn(nw, nh)
+                                value=0.2 * numpy.random.randn(nw, nh)
                                 .astype(theano.config.floatX))
         self.wh = theano.shared(name='wh',
-                                value=0.02 * numpy.random.randn(nh, nh)
+                                value=0.2 * numpy.random.randn(nh, nh)
                                 .astype(theano.config.floatX))
         self.w = theano.shared(name='w',
-                               value=0.02 * numpy.random.randn(nh, nw)
+                               value=0.2 * numpy.random.randn(nh, nw)
                                .astype(theano.config.floatX))
         self.bh = theano.shared(name='bh',
                                 value=numpy.zeros(nh,
@@ -176,7 +176,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_4_10000_0.1',
+            'folder':'rnnlm_20_1000_0.1',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -193,7 +193,7 @@ def main(param=None):
 
     # instanciate the model
     numpy.random.seed(param['seed'])
-    random.seed(param['seed'])
+    #random.seed(param['seed'])
 
     rnn = RNNLM(nh=param['nhidden'],
                 nw=len(train_dict))
@@ -208,17 +208,19 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 4 
-        train_lines = 10000
+        round_num =  20
+        train_lines = 1000
         #adapt learning rate
         lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
 
+        train_data_labels = zip(train_data[0], train_data[1])
         print "Training..."
         start = time.time()
 
         i = 1
         for j in xrange(round_num):
-            for (x,y) in zip(train_data[0][:train_lines], train_data[1][:train_lines]):
+            random.shuffle(train_data_labels)
+            for (x,y) in train_data_labels[:train_lines]:
                 rnn.sentence_train(x, y, lrs[i-1])
                 if i%100 == 0:
                     print "%d of %d" % (i, round_num*train_lines)
