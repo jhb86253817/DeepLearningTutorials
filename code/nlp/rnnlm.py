@@ -95,6 +95,10 @@ class RNNLM(object):
             param.set_value(numpy.load(os.path.join(folder,
                             param.name + '.npy')))
 
+    def load_word2vec(self):
+        self.wx.set_value(numpy.load('./word2vec/wx.npy'))
+
+
 def load_data():
     train_file = open('ptb.train.txt', 'r')
     # training set, a list of sentences
@@ -174,9 +178,10 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_2_40000_0.69',
+            'folder':'rnnlm_2_40000_0.19',
             'train': True,
-            'test': False}
+            'test': False,
+            'word2vec': True}
     print param
 
     # load data and dictionary
@@ -195,19 +200,23 @@ def main(param=None):
     rnn = RNNLM(nh=param['nhidden'],
                 nw=len(train_dict))
 
+    if param['word2vec'] == True:
+        rnn.load_word2vec()
+
     # load parameters
     if param['loadmodel'] == True:
         print "loading parameters\n"
         rnn.load(param['folder'])
 
     if param['train'] == True:
-        start = time.time()
 
-        print "Training..."
         round_num = 2
         train_lines = 40000
         #adapt learning rate
         lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
+
+        print "Training..."
+        start = time.time()
 
         i = 1
         for j in xrange(round_num):
