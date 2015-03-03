@@ -22,26 +22,20 @@ class RNNLM(object):
                                 value=numpy.eye(nw,
                                 dtype=theano.config.floatX))
         self.wx = theano.shared(name='wx',
-                                value=0.2 * numpy.random.randn(nw, nh)
+                                value=0.2 * numpy.random.uniform(-1.0, 1.0, (nw, nh))
                                 .astype(theano.config.floatX))
         self.wh = theano.shared(name='wh',
-                                value=0.2 * numpy.random.randn(nh, nh)
+                                value=0.2 * numpy.random.uniform(-1.0, 1.0, (nh, nh))
                                 .astype(theano.config.floatX))
         self.w = theano.shared(name='w',
-                               value=0.2 * numpy.random.randn(nh, nw)
+                               value=0.2 * numpy.random.uniform(-1.0, 1.0, (nh, nw))
                                .astype(theano.config.floatX))
-        self.bh = theano.shared(name='bh',
-                                value=numpy.zeros(nh,
-                                dtype=theano.config.floatX))
-        self.b = theano.shared(name='b',
-                               value=numpy.zeros(nw,
-                               dtype=theano.config.floatX))
         self.h0 = theano.shared(name='h0',
                                 value=numpy.zeros(nh,
                                 dtype=theano.config.floatX))
 
         #bundle
-        self.params = [self.wx, self.wh, self.w, self.bh, self.b, self.h0]
+        self.params = [self.wx, self.wh, self.w, self.h0]
 
         idxs = T.ivector()
         x = self.index[idxs]
@@ -49,8 +43,8 @@ class RNNLM(object):
 
         def recurrence(x_t, h_tm1):
             h_t = T.nnet.sigmoid(T.dot(x_t, self.wx)
-                                 + T.dot(h_tm1, self.wh) + self.bh)
-            s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b)
+                                 + T.dot(h_tm1, self.wh))
+            s_t = T.nnet.softmax(T.dot(h_t, self.w))
             return [h_t, s_t]
 
         [h, s], _ = theano.scan(fn=recurrence,
@@ -168,7 +162,7 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 0.1,
+            'lr': 0.02,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -176,7 +170,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': True,
-            'folder':'rnnlm_20_1000_0.1',
+            'folder':'rnnlm2_n_40000_0.1',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -208,10 +202,10 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num =  20
-        train_lines = 1000
+        round_num =  1
+        train_lines = 40000
         #adapt learning rate
-        lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
+        #lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
 
         train_data_labels = zip(train_data[0], train_data[1])
         print "Training..."
@@ -221,7 +215,7 @@ def main(param=None):
         for j in xrange(round_num):
             random.shuffle(train_data_labels)
             for (x,y) in train_data_labels[:train_lines]:
-                rnn.sentence_train(x, y, lrs[i-1])
+                rnn.sentence_train(x, y, param['lr'])
                 if i%100 == 0:
                     print "%d of %d" % (i, round_num*train_lines)
                     test_ppl = ppl(toy_data, rnn)
