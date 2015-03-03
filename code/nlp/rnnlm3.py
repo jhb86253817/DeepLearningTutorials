@@ -1,4 +1,4 @@
-# Remove network bias
+# Adagrad
 from __future__ import division
 import os
 import time
@@ -23,20 +23,47 @@ class RNNLM(object):
                                 value=numpy.eye(nw,
                                 dtype=theano.config.floatX))
         self.wx = theano.shared(name='wx',
-                                value=0.2 * numpy.random.uniform(-1.0, 1.0, (nw, nh))
+                                value=0.2 * numpy.random.uniform(1.0, -1.0, (nw, nh))
                                 .astype(theano.config.floatX))
         self.wh = theano.shared(name='wh',
-                                value=0.2 * numpy.random.uniform(-1.0, 1.0, (nh, nh))
+                                value=0.2 * numpy.random.uniform(1.0, -1.0, (nh, nh))
                                 .astype(theano.config.floatX))
         self.w = theano.shared(name='w',
-                               value=0.2 * numpy.random.uniform(-1.0, 1.0, (nh, nw))
+                               value=0.2 * numpy.random.uniform(1.0, -1.0, (nh, nw))
                                .astype(theano.config.floatX))
+        self.bh = theano.shared(name='bh',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+        self.b = theano.shared(name='b',
+                               value=numpy.zeros(nw,
+                               dtype=theano.config.floatX))
         self.h0 = theano.shared(name='h0',
                                 value=numpy.zeros(nh,
                                 dtype=theano.config.floatX))
 
+        # accumulate value of the model parameters
+        self.wx_acc = theano.shared(name='wx_acc',
+                                value=numpy.zeros((nw, nh),
+                                dtype=theano.config.floatX))
+        self.wh_acc = theano.shared(name='wh_acc',
+                                value=numpy.zeros((nh, nh),
+                                dtype=theano.config.floatX))
+        self.w_acc = theano.shared(name='w_acc',
+                                value=numpy.zeros((nh, nw),
+                                dtype=theano.config.floatX))
+        self.bh_acc = theano.shared(name='bh_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+        self.b_acc = theano.shared(name='b_acc',
+                               value=numpy.zeros(nw,
+                               dtype=theano.config.floatX))
+        self.h0_acc = theano.shared(name='h0_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+
         #bundle
-        self.params = [self.wx, self.wh, self.w, self.h0]
+        self.params = [self.wx, self.wh, self.w, self.bh, self.b, self.h0]
+        self.params_acc = [self.wx_acc, self.wh_acc, self.w_acc, self.bh_acc, self.b_acc, self.h0_acc]
 
         idxs = T.ivector()
         x = self.index[idxs]
@@ -44,8 +71,8 @@ class RNNLM(object):
 
         def recurrence(x_t, h_tm1):
             h_t = T.nnet.sigmoid(T.dot(x_t, self.wx)
-                                 + T.dot(h_tm1, self.wh))
-            s_t = T.nnet.softmax(T.dot(h_t, self.w))
+                                 + T.dot(h_tm1, self.wh) + self.bh)
+            s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b)
             return [h_t, s_t]
 
         [h, s], _ = theano.scan(fn=recurrence,
@@ -64,7 +91,15 @@ class RNNLM(object):
                                [T.arange(x.shape[0]), y_sentence])
 
         sentence_gradients = [T.grad(sentence_nll, param) for param in self.params]
-        sentence_updates = [(param, param - lr*g) for param,g in zip(self.params, sentence_gradients)]
+        # Adagrad
+        sentence_updates = []
+        for param_i, grad_i, acc_i in zip(self.params, sentence_gradients, self.params_acc):
+            acc = acc_i + T.sqr(grad_i)
+            sentence_updates.append((param_i, param_i - lr*grad_i/(T.sqrt(acc)+1)))
+            sentence_updates.append((acc_i, acc))
+
+        # SGD
+        #sentence_updates = [(param, param - lr*g) for param,g in zip(self.params, sentence_gradients)]
 
         # perplexity of a sentence
         sentence_ppl = T.pow(2, sentence_nll)
@@ -78,12 +113,12 @@ class RNNLM(object):
                                               updates=sentence_updates,
                                               allow_input_downcast=True)
     def save(self, folder):
-        for param in self.params:
+        for param in self.params+self.params_acc:
             numpy.save(os.path.join(folder, param.name+'.npy'),
                     param.get_value())
 
     def load(self, folder):
-        for param in self.params:
+        for param in self.params+self.params_acc:
             param.set_value(numpy.load(os.path.join(folder,
                             param.name + '.npy')))
 
@@ -163,15 +198,15 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 0.02,
+            'lr': 0.1,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
             # 60 is recommended
             'savemodel': True,
-            'loadmodel': True,
-            'folder':'rnnlm2_n_40000_0.1',
+            'loadmodel': False,
+            'folder':'adagrad',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -203,10 +238,8 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num =  1
+        round_num = 1
         train_lines = 40000
-        #adapt learning rate
-        #lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
 
         train_data_labels = zip(train_data[0], train_data[1])
         print "Training..."
