@@ -143,7 +143,7 @@ def load_data():
     return train_data, valid_data, test_data, train_dict
 
 def ppl(data, rnn):
-    ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0][:10], data[1][:10])]
+    ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0][:100], data[1][:100])]
     mean_ppl = numpy.mean(list(ppls))
 
     return mean_ppl
@@ -208,8 +208,8 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num =  40
-        train_lines = 10
+        round_num =  20
+        train_lines = 100
         #adapt learning rate
         #lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
 
@@ -222,7 +222,7 @@ def main(param=None):
             #random.shuffle(train_data_labels)
             for (x,y) in train_data_labels[:train_lines]:
                 rnn.sentence_train(x, y, param['lr'])
-                if i%10 == 0:
+                if i%100 == 0:
                     print "%d of %d" % (i, round_num*train_lines)
                     test_ppl = ppl(train_data, rnn)
                     print "Test perplexity of toy data: %f \n" % test_ppl

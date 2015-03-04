@@ -95,7 +95,7 @@ class RNNLM(object):
         sentence_updates = []
         for param_i, grad_i, acc_i in zip(self.params, sentence_gradients, self.params_acc):
             acc = acc_i + T.sqr(grad_i)
-            sentence_updates.append((param_i, param_i - lr*grad_i/(T.sqrt(acc)+1)))
+            sentence_updates.append((param_i, param_i - lr*grad_i/(T.sqrt(acc)+1e-5)))
             sentence_updates.append((acc_i, acc))
 
         # SGD
@@ -173,7 +173,7 @@ def load_data():
     return train_data, valid_data, test_data, train_dict
 
 def ppl(data, rnn):
-    ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0][:10], data[1][:10])]
+    ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0][:100], data[1][:100])]
     mean_ppl = numpy.mean(list(ppls))
 
     return mean_ppl
@@ -199,7 +199,7 @@ def main(param=None):
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
             'lr': 0.1,
-            'nhidden': 50,
+            'nhidden': 200,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
@@ -238,8 +238,8 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 40 
-        train_lines = 10
+        round_num = 20 
+        train_lines = 100
 
         train_data_labels = zip(train_data[0], train_data[1])
         print "Training..."
@@ -250,7 +250,7 @@ def main(param=None):
             #random.shuffle(train_data_labels)
             for (x,y) in train_data_labels[:train_lines]:
                 rnn.sentence_train(x, y, param['lr'])
-                if i%10 == 0:
+                if i%100 == 0:
                     print "%d of %d" % (i, round_num*train_lines)
                     test_ppl = ppl(train_data, rnn)
                     print "Test perplexity of toy data: %f \n" % test_ppl
@@ -268,7 +268,7 @@ def main(param=None):
             rnn.save(param['folder'])
 
     if param['test'] == True:
-        text = "<bos> japan is"
+        text = "<bos>"
         next_word(text, train_dict, index2word, rnn, 10)
 
 if __name__ == '__main__':

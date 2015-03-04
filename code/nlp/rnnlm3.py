@@ -95,7 +95,7 @@ class RNNLM(object):
         sentence_updates = []
         for param_i, grad_i, acc_i in zip(self.params, sentence_gradients, self.params_acc):
             acc = acc_i + T.sqr(grad_i)
-            sentence_updates.append((param_i, param_i - lr*grad_i/(T.sqrt(acc)+1)))
+            sentence_updates.append((param_i, param_i - lr*grad_i/(T.sqrt(acc)+1e-5)))
             sentence_updates.append((acc_i, acc))
 
         # SGD
@@ -204,10 +204,10 @@ def main(param=None):
             'seed': 345,
             'nepochs': 60,
             # 60 is recommended
-            'savemodel': True,
-            'loadmodel': False,
+            'savemodel': False,
+            'loadmodel': True,
             'folder':'adagrad',
-            'train': True,
+            'train': False,
             'test': False,
             'word2vec': False}
     print param
@@ -223,7 +223,7 @@ def main(param=None):
 
     # instanciate the model
     numpy.random.seed(param['seed'])
-    #random.seed(param['seed'])
+    random.seed(param['seed'])
 
     rnn = RNNLM(nh=param['nhidden'],
                 nw=len(train_dict))
@@ -247,7 +247,7 @@ def main(param=None):
 
         i = 1
         for j in xrange(round_num):
-            random.shuffle(train_data_labels)
+            #random.shuffle(train_data_labels)
             for (x,y) in train_data_labels[:train_lines]:
                 rnn.sentence_train(x, y, param['lr'])
                 if i%100 == 0:
@@ -266,6 +266,9 @@ def main(param=None):
         if param['savemodel'] == True:
             print "saving parameters\n"
             rnn.save(param['folder'])
+
+    #test_ppl = ppl(train_data, rnn)
+    #print "Test perplexity of train data: %f \n" % test_ppl
 
     if param['test'] == True:
         text = "<bos> japan is"
