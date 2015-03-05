@@ -199,7 +199,7 @@ def main(param=None):
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
             'lr': 0.1,
-            'nhidden': 200,
+            'nhidden': 50,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
