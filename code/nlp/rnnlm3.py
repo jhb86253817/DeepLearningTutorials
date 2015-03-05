@@ -198,16 +198,16 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 0.1,
+            'lr': 1,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
             # 60 is recommended
-            'savemodel': False,
-            'loadmodel': True,
-            'folder':'adagrad',
-            'train': False,
+            'savemodel': True,
+            'loadmodel': False,
+            'folder':'adagrad2',
+            'train': True,
             'test': False,
             'word2vec': False}
     print param
@@ -238,7 +238,7 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 1
+        round_num = 10
         train_lines = 40000
 
         train_data_labels = zip(train_data[0], train_data[1])
@@ -256,8 +256,8 @@ def main(param=None):
                     print "Test perplexity of toy data: %f \n" % test_ppl
                 i += 1
 
-        test_ppl = ppl(test_data, rnn)
-        print "Test perplexity of test data: %f \n" % test_ppl
+            test_ppl = ppl(test_data, rnn)
+            print "Test perplexity of test data: %f \n" % test_ppl
 
         end = time.time()
         print "%f seconds in total\n" % (end-start)
@@ -267,8 +267,8 @@ def main(param=None):
             print "saving parameters\n"
             rnn.save(param['folder'])
 
-    test_ppl = ppl(train_data, rnn)
-    print "Test perplexity of train data: %f \n" % test_ppl
+    #test_ppl = ppl(train_data, rnn)
+    #print "Test perplexity of train data: %f \n" % test_ppl
 
     if param['test'] == True:
         text = "<bos> japan is"
