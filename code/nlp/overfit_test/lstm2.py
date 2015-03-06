@@ -1,4 +1,5 @@
 # LSTM without peepholes
+# Adagrad
 from __future__ import division
 import os
 import time
@@ -71,8 +72,59 @@ class RNNLM(object):
                                 value=numpy.zeros(nh,
                                 dtype=theano.config.floatX))
 
+        self.wxg_acc = theano.shared(name='wxg_acc',
+                                value=numpy.zeros((nw, nh),
+                                dtype=theano.config.floatX))
+        self.whg_acc = theano.shared(name='whg_acc',
+                                value=numpy.zeros((nh, nh),
+                                dtype=theano.config.floatX))
+        self.wxi_acc = theano.shared(name='wxi_acc',
+                                value=numpy.zeros((nw, nh),
+                                dtype=theano.config.floatX))
+        self.whi_acc = theano.shared(name='whi_acc',
+                                value=numpy.zeros((nh, nh),
+                                dtype=theano.config.floatX))
+        self.wxf_acc = theano.shared(name='wxf_acc',
+                                value=numpy.zeros((nw, nh),
+                                dtype=theano.config.floatX))
+        self.whf_acc = theano.shared(name='whf_acc',
+                                value=numpy.zeros((nh, nh),
+                                dtype=theano.config.floatX))
+        self.wxo_acc = theano.shared(name='wxo_acc',
+                                value=numpy.zeros((nw, nh),
+                                dtype=theano.config.floatX))
+        self.who_acc = theano.shared(name='who_acc',
+                                value=numpy.zeros((nh, nh),
+                                dtype=theano.config.floatX))
+        self.w_acc = theano.shared(name='w_acc',
+                                value=numpy.zeros((nh, nw),
+                                dtype=theano.config.floatX))
+        self.bg_acc = theano.shared(name='bg_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+        self.bi_acc = theano.shared(name='bi_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+        self.bf_acc = theano.shared(name='bf_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+        self.bo_acc = theano.shared(name='bo_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+        self.b_acc = theano.shared(name='b_acc',
+                               value=numpy.zeros(nw,
+                               dtype=theano.config.floatX))
+        self.h0_acc = theano.shared(name='h0_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+        self.c0_acc = theano.shared(name='c0_acc',
+                                value=numpy.zeros(nh,
+                                dtype=theano.config.floatX))
+
+
         #bundle
         self.params = [self.wxg, self.whg, self.wxi, self.whi, self.wxf, self.whf, self.wxo, self.who, self.w, self.bg, self.bi, self.bf, self.bo, self.b, self.h0, self.c0]
+        self.params_acc = [self.wxg_acc, self.whg_acc, self.wxi_acc, self.whi_acc, self.wxf_acc, self.whf_acc, self.wxo_acc, self.who_acc, self.w_acc, self.bg_acc, self.bi_acc, self.bf_acc, self.bo_acc, self.b_acc, self.h0_acc, self.c0_acc]
 
         idxs = T.ivector()
         x = self.index[idxs]
@@ -104,6 +156,14 @@ class RNNLM(object):
                                [T.arange(x.shape[0]), y_sentence])
 
         sentence_gradients = [T.grad(sentence_nll, param) for param in self.params]
+        #Adagrad
+        sentence_updates = []
+        for param_i, grad_i, acc_i in zip(self.params, sentence_gradients, self.params_acc):
+            acc = acc_i + T.sqr(grad_i)
+            sentence_updates.append((param_i, param_i - lr*grad_i/(T.sqrt(acc)+1e-5)))
+            sentence_updates.append((acc_i, acc))
+
+        # SGD
         sentence_updates = [(param, param - lr*g) for param,g in zip(self.params, sentence_gradients)]
 
         # perplexity of a sentence
@@ -118,12 +178,12 @@ class RNNLM(object):
                                               updates=sentence_updates,
                                               allow_input_downcast=True)
     def save(self, folder):
-        for param in self.params:
+        for param in self.params+self.params_acc:
             numpy.save(os.path.join(folder, param.name+'.npy'),
                     param.get_value())
 
     def load(self, folder):
-        for param in self.params:
+        for param in self.params+self.params_acc:
             param.set_value(numpy.load(os.path.join(folder,
                             param.name + '.npy')))
 
@@ -203,7 +263,7 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 0.1,
+                'lr': 3,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -211,7 +271,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'lstm_40_10_0.1',
+            'folder':'lstm2_40_10_0.1',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -243,8 +303,8 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num =  20
-        train_lines = 100
+        round_num =  40
+        train_lines = 10
         #adapt learning rate
         #lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
 
@@ -257,7 +317,7 @@ def main(param=None):
             random.shuffle(train_data_labels)
             for (x,y) in train_data_labels[:train_lines]:
                 rnn.sentence_train(x, y, param['lr'])
-                if i%100 == 0:
+                if i%10 == 0:
                     print "%d of %d" % (i, round_num*train_lines)
                     test_ppl = ppl(train_data, rnn)
                     print "Test perplexity of toy data: %f \n" % test_ppl
