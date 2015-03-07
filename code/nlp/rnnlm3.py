@@ -198,7 +198,7 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 1,
+            'lr': 0.01,
             'nhidden': 50,
             # number of hidden units
             'seed': 345,
@@ -206,7 +206,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'adagrad2',
+            'folder':'adagrad3',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -238,7 +238,7 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 10
+        round_num = 1
         train_lines = 40000
 
         train_data_labels = zip(train_data[0], train_data[1])
@@ -267,11 +267,11 @@ def main(param=None):
             print "saving parameters\n"
             rnn.save(param['folder'])
 
-    #test_ppl = ppl(train_data, rnn)
-    #print "Test perplexity of train data: %f \n" % test_ppl
+    test_ppl = ppl(train_data, rnn)
+    print "Test perplexity of train data: %f \n" % test_ppl
 
     if param['test'] == True:
-        text = "<bos> japan is"
+        text = "<bos> japan"
         next_word(text, train_dict, index2word, rnn, 10)
 
 if __name__ == '__main__':
