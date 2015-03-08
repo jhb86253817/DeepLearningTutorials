@@ -205,7 +205,7 @@ def main(param=None):
             'nepochs': 60,
             # 60 is recommended
             'savemodel': True,
-            'loadmodel': False,
+            'loadmodel': True,
             'folder':'adagrad3',
             'train': True,
             'test': False,

@@ -1,2 +1,3 @@
-ppl: 480
-time: 12368
+test ppl: 480
+train ppl: 366
+iter: 2

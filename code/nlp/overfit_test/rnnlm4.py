@@ -1,5 +1,5 @@
 # Adagrad
-# initialize the weights fixing the largest sigular value to 1
+# Regularization
 from __future__ import division
 import os
 import time
@@ -14,7 +14,7 @@ from theano import tensor as T
 
 class RNNLM(object):
     """recurrent neural network language model"""
-    def __init__(self, nh, nw):
+    def __init__(self, nh, nw, alpha):
         """
         nh :: dimension of the hidden layer
         nw :: vocabulary size
@@ -24,13 +24,13 @@ class RNNLM(object):
                                 value=numpy.eye(nw,
                                 dtype=theano.config.floatX))
         self.wx = theano.shared(name='wx',
-                                value=self.sample_weights(nw, nh)
+                                value=0.2 * numpy.random.uniform(1.0, -1.0, (nw, nh))
                                 .astype(theano.config.floatX))
         self.wh = theano.shared(name='wh',
-                                value=self.sample_weights(nh, nh)
+                                value=0.2 * numpy.random.uniform(1.0, -1.0, (nh, nh))
                                 .astype(theano.config.floatX))
         self.w = theano.shared(name='w',
-                               value=self.sample_weights(nh, nw)
+                               value=0.2 * numpy.random.uniform(1.0, -1.0, (nh, nw))
                                .astype(theano.config.floatX))
         self.bh = theano.shared(name='bh',
                                 value=numpy.zeros(nh,
@@ -90,6 +90,9 @@ class RNNLM(object):
 
         sentence_nll = -T.mean(T.log2(p_y_given_x_sentence)
                                [T.arange(x.shape[0]), y_sentence])
+        # L2 regularization
+        params_l2 = sum([(param**2).sum() for param in self.params])
+        sentence_nll += alpha * params_l2
 
         sentence_gradients = [T.grad(sentence_nll, param) for param in self.params]
         # Adagrad
@@ -113,13 +116,6 @@ class RNNLM(object):
                                               outputs=sentence_nll,
                                               updates=sentence_updates,
                                               allow_input_downcast=True)
-
-    def sample_weights(self, sizeX, sizeY):
-        values = 0.2 * numpy.random.uniform(1.0, -1.0, (sizeX, sizeY))
-        _,svs,_ = numpy.linalg.svd(values)
-        values = values / svs[0]
-        return values
-
     def save(self, folder):
         for param in self.params+self.params_acc:
             numpy.save(os.path.join(folder, param.name+'.npy'),
@@ -181,10 +177,10 @@ def load_data():
     return train_data, valid_data, test_data, train_dict
 
 def ppl(data, rnn):
-        ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0][:10], data[1][:10])]
-        mean_ppl = numpy.mean(list(ppls))
+    ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0][:10], data[1][:10])]
+    mean_ppl = numpy.mean(list(ppls))
 
-        return mean_ppl
+    return mean_ppl
 
 def random_generator(probs):
     xk = xrange(10000)
@@ -206,8 +202,9 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 1,
+            'lr': 0.1,
             'nhidden': 50,
+            'alpha': 1e-4,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
@@ -234,7 +231,8 @@ def main(param=None):
     random.seed(param['seed'])
 
     rnn = RNNLM(nh=param['nhidden'],
-                nw=len(train_dict))
+                nw=len(train_dict),
+                alpha=param['alpha'])
 
     if param['word2vec'] == True:
         rnn.load_word2vec()
@@ -246,7 +244,7 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 40 
+        round_num = 40
         train_lines = 10
 
         train_data_labels = zip(train_data[0], train_data[1])
@@ -264,9 +262,6 @@ def main(param=None):
                     print "Test perplexity of toy data: %f \n" % test_ppl
                 i += 1
 
-        #test_ppl = ppl(test_data, rnn)
-        #print "Test perplexity of test data: %f \n" % test_ppl
-
         end = time.time()
         print "%f seconds in total\n" % (end-start)
 
@@ -275,8 +270,11 @@ def main(param=None):
             print "saving parameters\n"
             rnn.save(param['folder'])
 
+    #test_ppl = ppl(train_data, rnn)
+    #print "Test perplexity of train data: %f \n" % test_ppl
+
     if param['test'] == True:
-        text = "<bos>"
+        text = "<bos> japan"
         next_word(text, train_dict, index2word, rnn, 10)
 
 if __name__ == '__main__':

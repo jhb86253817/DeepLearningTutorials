@@ -1,0 +1,2 @@
+test ppl: 478
+train ppl: 308
