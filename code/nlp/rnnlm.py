@@ -176,7 +176,7 @@ def main(param=None):
             # 60 is recommended
             'savemodel': True,
             'loadmodel': False,
-            'folder':'rnnlm_3_40000_3.69',
+            'folder':'rnnlm_4_40000_3.69',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -208,7 +208,7 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 3 
+        round_num = 4 
         train_lines = 40000
         #adapt learning rate
         lrs = [param['lr'] * (1 - iter_num/(round_num*train_lines)) for iter_num in xrange(1,round_num*train_lines+1)]
@@ -222,7 +222,7 @@ def main(param=None):
             #random.shuffle(train_data_labels)
             for (x,y) in train_data_labels[:train_lines]:
                 rnn.sentence_train(x, y, lrs[i-1])
-                if i%1000 == 0:
+                if i%2000 == 0:
                     print "%d of %d" % (i, round_num*train_lines)
                     test_ppl = ppl(toy_data, rnn)
                     print "Test perplexity of toy data: %f \n" % test_ppl
@@ -240,8 +240,8 @@ def main(param=None):
     test_ppl = ppl(test_data, rnn)
     print "Test perplexity of test data: %f \n" % test_ppl
 
-    test_ppl = ppl(train_data, rnn)
-    print "Test perplexity of train data: %f \n" % test_ppl
+    #test_ppl = ppl(train_data, rnn)
+    #print "Test perplexity of train data: %f \n" % test_ppl
 
     if param['test'] == True:
         text = "<bos> japan is"

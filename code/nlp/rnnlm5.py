@@ -1,5 +1,5 @@
 # Adagrad
-# Regularization
+# Gradient clipping to be modified
 from __future__ import division
 import os
 import time
@@ -14,7 +14,7 @@ from theano import tensor as T
 
 class RNNLM(object):
     """recurrent neural network language model"""
-    def __init__(self, nh, nw, alpha):
+    def __init__(self, nh, nw, clip_thresh):
         """
         nh :: dimension of the hidden layer
         nw :: vocabulary size
@@ -90,12 +90,13 @@ class RNNLM(object):
 
         sentence_nll = -T.mean(T.log2(p_y_given_x_sentence)
                                [T.arange(x.shape[0]), y_sentence])
-        # L2 regularization
-        #params_l2 = sum([(param**2).sum() for param in self.params])
-        params_l2 = sum([(self.wx**2).sum(), (self.wh**2).sum(), (self.w**2).sum()])
-        sentence_nll += alpha * params_l2
 
         sentence_gradients = [T.grad(sentence_nll, param) for param in self.params]
+
+        # gradient clipping
+        grad_norm = T.sqrt(sum([(param**2).sum() for param in self.params]))
+        #self.params = [T.switch(grad_norm>clip_thresh, clip_thresh*param/grad_norm, param) for param in self.params]
+
         # Adagrad
         sentence_updates = []
         for param_i, grad_i, acc_i in zip(self.params, sentence_gradients, self.params_acc):
@@ -117,6 +118,8 @@ class RNNLM(object):
                                               outputs=sentence_nll,
                                               updates=sentence_updates,
                                               allow_input_downcast=True)
+        self.print_clip = theano.function(inputs=[], outputs=grad_norm, allow_input_downcast=True)
+
     def save(self, folder):
         for param in self.params+self.params_acc:
             numpy.save(os.path.join(folder, param.name+'.npy'),
@@ -203,16 +206,16 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 0.2,
+            'lr': 0.01,
             'nhidden': 50,
-            'alpha': 1e-5,
+            'clip_threshold': 1,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
             # 60 is recommended
             'savemodel': True,
             'loadmodel': True,
-            'folder':'adagrad5',
+            'folder':'adagrad3',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -233,7 +236,7 @@ def main(param=None):
 
     rnn = RNNLM(nh=param['nhidden'],
                 nw=len(train_dict),
-                alpha=param['alpha'])
+                clip_thresh=param['clip_threshold'])
 
     if param['word2vec'] == True:
         rnn.load_word2vec()
@@ -274,8 +277,8 @@ def main(param=None):
             print "saving parameters\n"
             rnn.save(param['folder'])
 
-    #test_ppl = ppl(train_data, rnn)
-    #print "Test perplexity of train data: %f \n" % test_ppl
+    test_ppl = ppl(train_data, rnn)
+    print "Test perplexity of train data: %f \n" % test_ppl
 
     if param['test'] == True:
         text = "<bos> japan"

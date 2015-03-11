@@ -1,5 +1,5 @@
 # Adagrad
-# Regularization
+# Randomly sampling traning case
 from __future__ import division
 import os
 import time
@@ -14,7 +14,7 @@ from theano import tensor as T
 
 class RNNLM(object):
     """recurrent neural network language model"""
-    def __init__(self, nh, nw, alpha):
+    def __init__(self, nh, nw):
         """
         nh :: dimension of the hidden layer
         nw :: vocabulary size
@@ -90,10 +90,6 @@ class RNNLM(object):
 
         sentence_nll = -T.mean(T.log2(p_y_given_x_sentence)
                                [T.arange(x.shape[0]), y_sentence])
-        # L2 regularization
-        #params_l2 = sum([(param**2).sum() for param in self.params])
-        params_l2 = sum([(self.wx**2).sum(), (self.wh**2).sum(), (self.w**2).sum()])
-        sentence_nll += alpha * params_l2
 
         sentence_gradients = [T.grad(sentence_nll, param) for param in self.params]
         # Adagrad
@@ -203,16 +199,15 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 0.2,
+            'lr': 0.1,
             'nhidden': 50,
-            'alpha': 1e-5,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
             # 60 is recommended
             'savemodel': True,
             'loadmodel': True,
-            'folder':'adagrad5',
+            'folder':'adagrad_random_80000',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -232,8 +227,7 @@ def main(param=None):
     random.seed(param['seed'])
 
     rnn = RNNLM(nh=param['nhidden'],
-                nw=len(train_dict),
-                alpha=param['alpha'])
+                nw=len(train_dict))
 
     if param['word2vec'] == True:
         rnn.load_word2vec()
@@ -245,26 +239,21 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 1
-        train_lines = 40000
+        round_num = 160000
 
         train_data_labels = zip(train_data[0], train_data[1])
+        train_data_length = len(train_data[0]) - 1
+
         print "Training..."
         start = time.time()
 
-        i = 1
-        for j in xrange(round_num):
-            #random.shuffle(train_data_labels)
-            for (x,y) in train_data_labels[:train_lines]:
-                rnn.sentence_train(x, y, param['lr'])
-                if i%1000 == 0:
-                    print "%d of %d" % (i, round_num*train_lines)
-                    test_ppl = ppl(toy_data, rnn)
-                    print "Test perplexity of toy data: %f \n" % test_ppl
-                i += 1
-
-            test_ppl = ppl(test_data, rnn)
-            print "Test perplexity of test data: %f \n" % test_ppl
+        for i in xrange(1, round_num+1):
+            rand_index = random.randint(0, train_data_length)
+            rnn.sentence_train(train_data_labels[rand_index][0], train_data_labels[rand_index][1], param['lr'])
+            if i%10000 == 0:
+                print "%d of %d" % (i, round_num)
+                test_ppl = ppl(test_data, rnn)
+                print "Test perplexity of test data: %f \n" % test_ppl
 
         end = time.time()
         print "%f seconds in total\n" % (end-start)
@@ -273,9 +262,6 @@ def main(param=None):
         if param['savemodel'] == True:
             print "saving parameters\n"
             rnn.save(param['folder'])
-
-    #test_ppl = ppl(train_data, rnn)
-    #print "Test perplexity of train data: %f \n" % test_ppl
 
     if param['test'] == True:
         text = "<bos> japan"

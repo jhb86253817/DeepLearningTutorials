@@ -1,5 +1,4 @@
 # Adagrad
-# Regularization
 from __future__ import division
 import os
 import time
@@ -14,7 +13,7 @@ from theano import tensor as T
 
 class RNNLM(object):
     """recurrent neural network language model"""
-    def __init__(self, nh, nw, alpha):
+    def __init__(self, nh, nw, clip_thresh):
         """
         nh :: dimension of the hidden layer
         nw :: vocabulary size
@@ -30,8 +29,8 @@ class RNNLM(object):
                                 value=0.2 * numpy.random.uniform(1.0, -1.0, (nh, nh))
                                 .astype(theano.config.floatX))
         self.w = theano.shared(name='w',
-                               value=0.2 * numpy.random.uniform(1.0, -1.0, (nh, nw))
-                               .astype(theano.config.floatX))
+                                value=0.2 * numpy.random.uniform(1.0, -1.0, (nh, nw))
+                                .astype(theano.config.floatX))
         self.bh = theano.shared(name='bh',
                                 value=numpy.zeros(nh,
                                 dtype=theano.config.floatX))
@@ -90,12 +89,15 @@ class RNNLM(object):
 
         sentence_nll = -T.mean(T.log2(p_y_given_x_sentence)
                                [T.arange(x.shape[0]), y_sentence])
-        # L2 regularization
-        #params_l2 = sum([(param**2).sum() for param in self.params])
-        params_l2 = sum([(self.wx**2).sum(), (self.wh**2).sum(), (self.w**2).sum()])
-        sentence_nll += alpha * params_l2
 
         sentence_gradients = [T.grad(sentence_nll, param) for param in self.params]
+
+        # gradient clipping
+        grad_norm = T.sqrt(sum([(grad**2).sum() for grad in sentence_gradients]))
+        weight_norm = T.sqrt(sum([(param**2).sum() for param in self.params]))
+        grad_weight_ratio = grad_norm / weight_norm
+        #sentence_gradients = [T.switch(grad_weight_ratio>1e-5, 1e-5*grad/grad_weight_ratio, grad) for grad in sentence_gradients]
+
         # Adagrad
         sentence_updates = []
         for param_i, grad_i, acc_i in zip(self.params, sentence_gradients, self.params_acc):
@@ -117,6 +119,10 @@ class RNNLM(object):
                                               outputs=sentence_nll,
                                               updates=sentence_updates,
                                               allow_input_downcast=True)
+        self.print_gard = theano.function(inputs=[idxs, y_sentence],
+                outputs=grad_norm, allow_input_downcast=True)
+        self.print_weight = theano.function(inputs=[], outputs=weight_norm, allow_input_downcast=True)
+
     def save(self, folder):
         for param in self.params+self.params_acc:
             numpy.save(os.path.join(folder, param.name+'.npy'),
@@ -178,7 +184,7 @@ def load_data():
     return train_data, valid_data, test_data, train_dict
 
 def ppl(data, rnn):
-    ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0], data[1])]
+    ppls = [rnn.ppl(x,y) for (x,y) in zip(data[0][:60], data[1][:60])]
     mean_ppl = numpy.mean(list(ppls))
 
     return mean_ppl
@@ -203,16 +209,16 @@ def main(param=None):
         param = {
             #'lr': 0.0970806646812754,
             #'lr': 3.6970806646812754,
-            'lr': 0.2,
+            'lr': 0.05,
             'nhidden': 50,
-            'alpha': 1e-5,
+            'clip_threshold': 1,
             # number of hidden units
             'seed': 345,
             'nepochs': 60,
             # 60 is recommended
             'savemodel': True,
-            'loadmodel': True,
-            'folder':'adagrad5',
+            'loadmodel': False,
+            'folder':'rnnlm5_40_10_0.1',
             'train': True,
             'test': False,
             'word2vec': False}
@@ -233,7 +239,7 @@ def main(param=None):
 
     rnn = RNNLM(nh=param['nhidden'],
                 nw=len(train_dict),
-                alpha=param['alpha'])
+                clip_thresh=param['clip_threshold'])
 
     if param['word2vec'] == True:
         rnn.load_word2vec()
@@ -245,8 +251,8 @@ def main(param=None):
 
     if param['train'] == True:
 
-        round_num = 1
-        train_lines = 40000
+        round_num = 10
+        train_lines = 60
 
         train_data_labels = zip(train_data[0], train_data[1])
         print "Training..."
@@ -257,14 +263,15 @@ def main(param=None):
             #random.shuffle(train_data_labels)
             for (x,y) in train_data_labels[:train_lines]:
                 rnn.sentence_train(x, y, param['lr'])
-                if i%1000 == 0:
+                if i%60 == 0:
                     print "%d of %d" % (i, round_num*train_lines)
-                    test_ppl = ppl(toy_data, rnn)
+                    test_ppl = ppl(train_data, rnn)
                     print "Test perplexity of toy data: %f \n" % test_ppl
+                    grad = rnn.print_gard(x, y)
+                    print "current grad norm is %f \n" % grad
+                    #weight = rnn.print_weight()
+                    #print "current weight norm is %f \n" % weight
                 i += 1
-
-            test_ppl = ppl(test_data, rnn)
-            print "Test perplexity of test data: %f \n" % test_ppl
 
         end = time.time()
         print "%f seconds in total\n" % (end-start)
@@ -273,9 +280,6 @@ def main(param=None):
         if param['savemodel'] == True:
             print "saving parameters\n"
             rnn.save(param['folder'])
-
-    #test_ppl = ppl(train_data, rnn)
-    #print "Test perplexity of train data: %f \n" % test_ppl
 
     if param['test'] == True:
         text = "<bos> japan"
